@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -9,7 +10,11 @@ import (
 
 	"github.com/arturyumaev/bookmarks/bookmarks-api/models"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
+
+	// bookmark
+	bookmarkHTTP "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/delivery/http"
+	bookmarkRepo "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/repository/boltdb"
+	bookmarkUC "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/usecase"
 )
 
 type IApplication interface {
@@ -24,7 +29,7 @@ type application struct {
 func (app *application) Run() error {
 	go func() {
 		if err := app.httpServer.ListenAndServe(); err != nil {
-			logrus.Fatalf("failed to listen and serve: %+v", err)
+			log.Fatalf("failed to listen and serve: %+v", err)
 		}
 	}()
 
@@ -46,19 +51,22 @@ func NewApplication(config *models.Config) IApplication {
 		gin.SetMode(gin.DebugMode)
 	}
 
-	logrus.SetOutput(os.Stdout)
+	r := gin.Default()
 
-	router := gin.Default()
-
-	router.GET("/health", func(c *gin.Context) {
+	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "OK",
 		})
 	})
 
+	// bookmark
+	bookmarkRepo := bookmarkRepo.NewRepository()
+	bookmarkUseCase := bookmarkUC.NewUseCase(bookmarkRepo)
+	bookmarkHTTP.RegisterHTTPEndpoints(r, bookmarkUseCase)
+
 	httpServer := &http.Server{
 		Addr:           ":" + config.Server.Port,
-		Handler:        router,
+		Handler:        r,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
