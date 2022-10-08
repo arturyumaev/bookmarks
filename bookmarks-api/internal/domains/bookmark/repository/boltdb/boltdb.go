@@ -5,9 +5,12 @@ import (
 
 	"github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark"
 	"github.com/arturyumaev/bookmarks/bookmarks-api/models"
+
+	bolt "go.etcd.io/bbolt"
 )
 
 type repository struct {
+	boltdb *bolt.DB
 }
 
 func (repo *repository) CreateBookmark(ctx context.Context, bookmark *models.Bookmark) (*models.Bookmark, error) {
@@ -30,6 +33,6 @@ func (repo *repository) DeleteBookmark(ctx context.Context, bookmarkId string) e
 	return nil
 }
 
-func NewRepository() bookmark.Repository {
+func NewRepository(boltdb *bolt.DB) bookmark.Repository {
 	return &repository{}
 }

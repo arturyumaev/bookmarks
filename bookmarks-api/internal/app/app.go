@@ -10,6 +10,7 @@ import (
 
 	"github.com/arturyumaev/bookmarks/bookmarks-api/models"
 	"github.com/gin-gonic/gin"
+	bolt "go.etcd.io/bbolt"
 
 	// bookmark
 	bookmarkHTTP "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/delivery/http"
@@ -17,18 +18,15 @@ import (
 	bookmarkUC "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/usecase"
 )
 
-type IApplication interface {
-	Run() error
+type Application struct {
+	HttpServer *http.Server
+	Config     *models.Config
+	BoltDB     *bolt.DB
 }
 
-type application struct {
-	httpServer *http.Server
-	config     *models.Config
-}
-
-func (app *application) Run() error {
+func (app *Application) Run() error {
 	go func() {
-		if err := app.httpServer.ListenAndServe(); err != nil {
+		if err := app.HttpServer.ListenAndServe(); err != nil {
 			log.Fatalf("failed to listen and serve: %+v", err)
 		}
 	}()
@@ -41,14 +39,19 @@ func (app *application) Run() error {
 	ctx, shutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdown()
 
-	return app.httpServer.Shutdown(ctx)
+	return app.HttpServer.Shutdown(ctx)
 }
 
-func NewApplication(config *models.Config) IApplication {
+func NewApplication(config *models.Config) *Application {
 	if config.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
+	}
+
+	boltDB, err := initBoltDB(config)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	r := gin.Default()
@@ -60,7 +63,7 @@ func NewApplication(config *models.Config) IApplication {
 	})
 
 	// bookmark
-	bookmarkRepo := bookmarkRepo.NewRepository()
+	bookmarkRepo := bookmarkRepo.NewRepository(boltDB)
 	bookmarkUseCase := bookmarkUC.NewUseCase(bookmarkRepo)
 	bookmarkHTTP.RegisterHTTPEndpoints(r, bookmarkUseCase)
 
@@ -72,8 +75,14 @@ func NewApplication(config *models.Config) IApplication {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	return &application{
+	return &Application{
 		httpServer,
 		config,
+		boltDB,
 	}
+}
+
+func initBoltDB(config *models.Config) (*bolt.DB, error) {
+	db, err := bolt.Open(config.DB.BoltDB, 0600, nil)
+	return db, err
 }
