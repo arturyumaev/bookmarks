@@ -40,7 +40,6 @@ func main() {
 	}
 
 	app := app.NewApplication(config)
-	defer app.BoltDB.Close()
 
 	if err = app.Run(); err != nil {
 		logrus.Fatal(err)

@@ -2,4 +2,4 @@ server:
   port: 8080
 mode: "development"
 db:
-  boltdb: "bolt.db"
+  boltdb: "dev.db"

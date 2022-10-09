@@ -1,9 +1,11 @@
 package http
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark"
+	"github.com/arturyumaev/bookmarks/bookmarks-api/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +14,22 @@ type handler struct {
 }
 
 func (h *handler) CreateBookmark(c *gin.Context) {
-	c.JSON(http.StatusOK, nil)
+	bookmark := &models.Bookmark{}
+	if err := c.BindJSON(bookmark); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	bm, err := h.uc.CreateBookmark(c.Request.Context(), bookmark)
+	if err != nil {
+		log.Println(err.Error())
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, bm)
 }
 
 func (h *handler) GetBookmark(c *gin.Context) {
@@ -20,7 +37,16 @@ func (h *handler) GetBookmark(c *gin.Context) {
 }
 
 func (h *handler) GetBookmarks(c *gin.Context) {
-	c.JSON(http.StatusOK, nil)
+	bms, err := h.uc.GetBookmarks(c.Request.Context())
+	if err != nil {
+		log.Println(err.Error())
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, bms)
 }
 
 func (h *handler) UpdateBookmark(c *gin.Context) {

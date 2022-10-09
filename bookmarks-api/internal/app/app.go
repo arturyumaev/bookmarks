@@ -13,6 +13,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	// bookmark
+	"github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark"
 	bookmarkHTTP "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/delivery/http"
 	bookmarkRepo "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/repository/boltdb"
 	bookmarkUC "github.com/arturyumaev/bookmarks/bookmarks-api/internal/domains/bookmark/usecase"
@@ -38,6 +39,7 @@ func (app *Application) Run() error {
 
 	ctx, shutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdown()
+	defer app.BoltDB.Close()
 
 	return app.HttpServer.Shutdown(ctx)
 }
@@ -84,5 +86,38 @@ func NewApplication(config *models.Config) *Application {
 
 func initBoltDB(config *models.Config) (*bolt.DB, error) {
 	db, err := bolt.Open(config.DB.BoltDB, 0600, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = initBoltDBBucket(db, bookmark.BookmarkBucketName, !config.IsProduction())
+	if err != nil {
+		return nil, err
+	}
+
+	err = initBoltDBBucket(db, bookmark.ColorBucketName, !config.IsProduction())
+	if err != nil {
+		return nil, err
+	}
+
 	return db, err
+}
+
+func initBoltDBBucket(db *bolt.DB, name string, isDevelopment bool) error {
+	err := db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(name))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if isDevelopment {
+		log.Println("successfully created bucket", name)
+	}
+
+	return nil
 }
