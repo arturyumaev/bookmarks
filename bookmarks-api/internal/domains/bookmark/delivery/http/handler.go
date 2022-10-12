@@ -37,6 +37,14 @@ func (h *handler) GetBookmark(c *gin.Context) {
 	bm, err := h.uc.GetBookmark(c.Request.Context(), id)
 	if err != nil {
 		log.Println(err.Error())
+
+		if err == bookmark.ErrNoSuchBookmark {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
@@ -60,10 +68,49 @@ func (h *handler) GetBookmarks(c *gin.Context) {
 }
 
 func (h *handler) UpdateBookmark(c *gin.Context) {
-	c.JSON(http.StatusOK, nil)
+	id := c.Param("id")
+	ctx := c.Request.Context()
+	bm, err := h.uc.GetBookmark(ctx, id)
+	if err != nil {
+		log.Println(err.Error())
+
+		if err == bookmark.ErrNoSuchBookmark {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	bm.Id = id
+	nextBm, err := h.uc.UpdateBookmark(ctx, id, bm)
+	if err != nil {
+		log.Println(err.Error())
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, nextBm)
 }
 
 func (h *handler) DeleteBookmark(c *gin.Context) {
+	id := c.Param("id")
+	err := h.uc.DeleteBookmark(c.Request.Context(), id)
+	if err != nil {
+		log.Println(err.Error())
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, nil)
 }
 

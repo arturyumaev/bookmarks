@@ -39,8 +39,17 @@ func (uc *useCase) GetBookmarks(ctx context.Context) ([]*models.Bookmark, error)
 }
 
 func (uc *useCase) UpdateBookmark(ctx context.Context, bookmarkId string, bookmark *models.Bookmark) (*models.Bookmark, error) {
-	bookmarks, err := uc.repo.UpdateBookmark(ctx, bookmarkId, bookmark)
-	return bookmarks, err
+	if bookmark.Title == "" {
+		return nil, errors.New("title can not be empty")
+	}
+
+	if bookmark.Content == "" {
+		return nil, errors.New("content can not be empty")
+	}
+
+	nextBookmark, err := uc.repo.UpdateBookmark(ctx, bookmarkId, bookmark)
+
+	return nextBookmark, err
 }
 
 func (uc *useCase) DeleteBookmark(ctx context.Context, bookmarkId string) error {

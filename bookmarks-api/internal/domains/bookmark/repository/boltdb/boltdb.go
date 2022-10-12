@@ -25,6 +25,9 @@ func (repo *repository) CreateBookmark(ctx context.Context, bm *models.Bookmark)
 		err := b.Put([]byte(bm.Id), buf)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return bm, nil
 }
@@ -35,6 +38,10 @@ func (repo *repository) GetBookmark(ctx context.Context, bmId string) (*models.B
 	err := repo.boltdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bookmark.BookmarkBucketName))
 		bytes := b.Get([]byte(bmId))
+
+		if len(bytes) == 0 {
+			return bookmark.ErrNoSuchBookmark
+		}
 
 		var err error
 		bm, err = repo.unmarshall(bytes)
@@ -75,10 +82,33 @@ func (repo *repository) GetBookmarks(ctx context.Context) ([]*models.Bookmark, e
 }
 
 func (repo *repository) UpdateBookmark(ctx context.Context, bmId string, bm *models.Bookmark) (*models.Bookmark, error) {
-	return nil, nil
+	buf, err := repo.marshall(bm)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repo.boltdb.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bookmark.BookmarkBucketName))
+		err := b.Put([]byte(bm.Id), buf)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return bm, nil
 }
 
 func (repo *repository) DeleteBookmark(ctx context.Context, bmId string) error {
+	err := repo.boltdb.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bookmark.BookmarkBucketName))
+		err := b.Delete([]byte(bmId))
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
