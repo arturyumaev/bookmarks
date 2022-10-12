@@ -33,7 +33,17 @@ func (h *handler) CreateBookmark(c *gin.Context) {
 }
 
 func (h *handler) GetBookmark(c *gin.Context) {
-	c.JSON(http.StatusOK, nil)
+	id := c.Param("id")
+	bm, err := h.uc.GetBookmark(c.Request.Context(), id)
+	if err != nil {
+		log.Println(err.Error())
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, bm)
 }
 
 func (h *handler) GetBookmarks(c *gin.Context) {

@@ -30,7 +30,25 @@ func (repo *repository) CreateBookmark(ctx context.Context, bm *models.Bookmark)
 }
 
 func (repo *repository) GetBookmark(ctx context.Context, bmId string) (*models.Bookmark, error) {
-	return nil, nil
+	bm := &models.Bookmark{}
+
+	err := repo.boltdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bookmark.BookmarkBucketName))
+		bytes := b.Get([]byte(bmId))
+
+		var err error
+		bm, err = repo.unmarshall(bytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return bm, nil
 }
 
 func (repo *repository) GetBookmarks(ctx context.Context) ([]*models.Bookmark, error) {
