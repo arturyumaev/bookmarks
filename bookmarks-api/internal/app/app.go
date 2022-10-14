@@ -8,6 +8,10 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/arturyumaev/bookmarks/bookmarks-api/metrics"
+	"github.com/arturyumaev/bookmarks/bookmarks-api/middleware"
 	"github.com/arturyumaev/bookmarks/bookmarks-api/models"
 	"github.com/gin-gonic/gin"
 	bolt "go.etcd.io/bbolt"
@@ -51,17 +55,24 @@ func NewApplication(config *models.Config) *Application {
 		gin.SetMode(gin.DebugMode)
 	}
 
+	metrics.InitMetrics()
+
 	boltDB, err := initBoltDB(config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	r := gin.Default()
+	r.Use(middleware.PrometheusMiddleware)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "OK",
 		})
+	})
+
+	r.GET("/metrics", func(ctx *gin.Context) {
+		promhttp.Handler().ServeHTTP(ctx.Writer, ctx.Request)
 	})
 
 	// bookmark
