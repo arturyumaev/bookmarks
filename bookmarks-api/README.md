@@ -2,5 +2,11 @@
 
 Run locally
 ```Shell
-CompileDaemon -build="go build -o ./bin/bookmarks ./cmd/bookmarks/bookmarks.go" -command="./bin/bookmarks -config ./config/config.yaml" -color
+make build
+make run
+```
+
+Run locally with CompileDaemon
+```
+make run_reload
 ```

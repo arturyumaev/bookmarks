@@ -29,8 +29,7 @@ var (
 )
 
 func InitMetrics() {
-	r := prometheus.NewRegistry()
-	r.MustRegister(TotalRequests)
-	r.MustRegister(ResponseStatus)
-	r.MustRegister(HttpDuration)
+	prometheus.Register(TotalRequests)
+	prometheus.Register(ResponseStatus)
+	prometheus.Register(HttpDuration)
 }
